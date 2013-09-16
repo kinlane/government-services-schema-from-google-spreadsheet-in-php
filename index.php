@@ -105,14 +105,14 @@ $providerfile = str_replace('gsx$','',$providerfile);
 $providerjson = json_decode($providerfile);
 $providerrows = $providerjson->{'feed'}->{'entry'};
 
-// Load Provider Worksheet
+// Load Operator Worksheet
 $operatorurl = 'http://spreadsheets.google.com/feeds/list/' . $spreadsheetkey . '/3/public/values?alt=json';
 $operatorfile= file_get_contents($operatorurl);
 $operatorfile = str_replace('gsx$','',$operatorfile);
 $operatorjson = json_decode($operatorfile);
 $operatorrows = $operatorjson->{'feed'}->{'entry'};
 
-// Load Provider Worksheet
+// Load Service Location Worksheet
 $servicelocationurl = 'http://spreadsheets.google.com/feeds/list/' . $spreadsheetkey . '/4/public/values?alt=json';
 $servicelocationfile= file_get_contents($servicelocationurl);
 $servicelocationfile = str_replace('gsx$','',$servicelocationfile);
