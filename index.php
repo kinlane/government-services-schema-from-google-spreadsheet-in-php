@@ -1,5 +1,10 @@
+<!DOCTYPE html>
+<html>
+<body bgcolor="#F2F2F2">
+
 <?php
-// Format the JSOn so it looks perty!
+
+// Make the JSON Look Perty
 function format_json($json, $html = false, $tabspaces = null)
     {
         $tabcount = 0;
@@ -68,27 +73,27 @@ function format_json($json, $html = false, $tabspaces = null)
 
         return $result;
     }
+ 
 $fieldname = '$t';
 
 if(isset($_REQUEST['sk']))
 	{
-	$spreadsheetkey = $_REQUEST['sk'];
+	$url = $_REQUEST['sk'];
 	} 
 else
 	{
-	// Template located at - https://docs.google.com/spreadsheet/pub?key=0AmRmiTou7vbjdGtqM193ajJuVTFidnNVMU9IRkdtZWc&output=html
-	$spreadsheetkey = "0AmRmiTou7vbjdGtqM193ajJuVTFidnNVMU9IRkdtZWc";
+	$url = "https://docs.google.com/spreadsheet/pub?key=0AmRmiTou7vbjdGZEaUdpV2lMNTRwZG5GMTdfWWRMUUE&output=html";
 	} 	
+	
+	$spreadsheetkey = str_replace("https://docs.google.com/spreadsheet/pub?key=","",$url);
+	$spreadsheetkey = str_replace("&output=html","",$spreadsheetkey);	
 
 ?>
-<h1>Government Services Schema</h1>
-<p>This is a basic tool that pulls from a Google Spreadsheet that is setup as a government services template, allowing the editing of groups of services to renders as JSON output.</p>
 <form action="index.php" method="get">
-	<strong>Google Doc ID:</strong> <input type="text" name="sk" value="<?php echo $spreadsheetkey; ?>" size="75" />
+	<strong>Google Doc ID:</strong> <input type="text" name="sk" value="<?php echo $url; ?>" size="75" />
 	<input type="submit" name="changekey" value="Change Key" />
 </form>
-<p>By default this tool uses <a href="https://docs.google.com/spreadsheet/pub?key=0AmRmiTou7vbjdGtqM193ajJuVTFidnNVMU9IRkdtZWc&output=html" target="_blank">this spreadsheet</a>, but you can copy the template and populate with different data, publish publicy, and use the key to generate new JSON output.</p>
-<p>Right now this is a prototype, but will be made more flexibile over time.</p>
+
 <?php
 
 // Load Service Worksheet
@@ -98,22 +103,8 @@ $servicefile = str_replace('gsx$','',$servicefile);
 $servicejson = json_decode($servicefile);
 $servicerows = $servicejson->{'feed'}->{'entry'};
 
-// Load Provider Worksheet
-$providerurl = 'http://spreadsheets.google.com/feeds/list/' . $spreadsheetkey . '/2/public/values?alt=json';
-$providerfile= file_get_contents($providerurl);
-$providerfile = str_replace('gsx$','',$providerfile);
-$providerjson = json_decode($providerfile);
-$providerrows = $providerjson->{'feed'}->{'entry'};
-
-// Load Operator Worksheet
-$operatorurl = 'http://spreadsheets.google.com/feeds/list/' . $spreadsheetkey . '/3/public/values?alt=json';
-$operatorfile= file_get_contents($operatorurl);
-$operatorfile = str_replace('gsx$','',$operatorfile);
-$operatorjson = json_decode($operatorfile);
-$operatorrows = $operatorjson->{'feed'}->{'entry'};
-
-// Load Service Location Worksheet
-$servicelocationurl = 'http://spreadsheets.google.com/feeds/list/' . $spreadsheetkey . '/4/public/values?alt=json';
+// Load Service Locations Worksheet
+$servicelocationurl = 'http://spreadsheets.google.com/feeds/list/' . $spreadsheetkey . '/2/public/values?alt=json';
 $servicelocationfile= file_get_contents($servicelocationurl);
 $servicelocationfile = str_replace('gsx$','',$servicelocationfile);
 $servicelocationjson = json_decode($servicelocationfile);
@@ -122,6 +113,9 @@ $servicelocationrows = $servicelocationjson->{'feed'}->{'entry'};
 // For Each Spreadsheet Row (Separate service definition will be created for each)
 foreach($servicerows as $servicerow) 
 	{		
+	?>
+	<div style="padding-left: 25px;">
+	<?php
 	$id = $servicerow->id->$fieldname;
 	$updated = $servicerow->updated->$fieldname;
 	$title = $servicerow->title->$fieldname;
@@ -133,12 +127,14 @@ foreach($servicerows as $servicerow)
 	$image = $servicerow->image->$fieldname;
 	$alternatenames = $servicerow->alternatenames->$fieldname;
 	$servicearea = $servicerow->servicearea->$fieldname;
-	$provider = $servicerow->provider->$fieldname;
+	$providername = $servicerow->providername->$fieldname;
+	$providerurl = $servicerow->providerurl->$fieldname;
+	$providerlogo = $servicerow->providerlogo->$fieldname;
 	$operator = $servicerow->operator->$fieldname;
 	$servicetype = $servicerow->servicetype->$fieldname;
 	$servicetypetaxonomyused = $servicerow->servicetypetaxonomyused->$fieldname;
 	$produces = $servicerow->produces->$fieldname;
-	$audience = $servicerow->audiencetype->$fieldname;
+	$audience = $servicerow->audience->$fieldname;
 	$availablelanguages = $servicerow->availablelanguages->$fieldname;
 	$serviceurl = $servicerow->serviceurl->$fieldname;
 	$servicephone = $servicerow->servicephone->$fieldname;
@@ -160,8 +156,8 @@ foreach($servicerows as $servicerow)
 	//echo "Service URL: " . $serviceurl . "<br />";
 	//echo "Service Phone: " . $servicephone . "<br />";	
 	//echo "<br />";
-		
-	// Let's build the Schema - yay!
+	
+	// Let's buil the Schema
 	$Schema = array();
 	$F['@context'] = 'http://schema.org/';
 	$F['@type'] = 'GovernmentService';
@@ -183,24 +179,10 @@ foreach($servicerows as $servicerow)
 
 	$P = array();
 	$P["@type"] = "GovernmentOrganization";
+	$P["name"] = $providername;
+	$P["url"] = $providerurl;
+	$P["logo"] = $providerlogo;
 	
-	$r = 1;
-	foreach($providerrows as $providerrow) 
-		{		
-		$provider_name = $providerrow->providername->$fieldname;
-		$provider_url = $providerrow->url->$fieldname;	
-		$provider_logo = $providerrow->logo->$fieldname;
-		$provider_service_name = $providerrow->servicename->$fieldname;
-				
-		if(strpos($provider_service_name, $servicename) !== false)
-			{
-			//echo "22--Service Name: " . $provider_service_name . " = " . $servicename . "<br />";		
-			$P["name"] = $provider_name;
-			$P["url"] = $provider_url;
-			$P["logo"] = $provider_logo;
-			}
-	  	$r++;	 		 
-		}
 	$F['provider'] = $P;		
 	
 	$SA = array();
@@ -223,6 +205,7 @@ foreach($servicerows as $servicerow)
 		$servicelocation_addresscity = $servicelocationrow->addresscity->$fieldname;
 		$servicelocation_addressstate = $servicelocationrow->addressstate->$fieldname;
 		$servicelocation_addresszip = $servicelocationrow->addresszip->$fieldname;
+		$servicelocation_telephone = $servicelocationrow->telephone->$fieldname;
 		$servicelocation_service_name = $servicelocationrow->servicename->$fieldname;
 						
 		//echo "Location Name: " . $servicelocation_name . "<br />";
@@ -232,9 +215,7 @@ foreach($servicerows as $servicerow)
 		//echo "Location Zip: " . $servicelocation_addresszip . "<br />";						
 
 		if(strpos($servicelocation_service_name, $servicename) !== false)
-			{
-			//echo "44--Service Name: " . $servicelocation_service_name . " = " . $servicename . "<br />";	
-						
+			{			
 			$SL = array();
 			$SL["@type"] = "CivicStructure";	
 			$SL["name"] = $servicelocation_name;
@@ -245,11 +226,11 @@ foreach($servicerows as $servicerow)
 			$SLA["addressLocality"] = $servicelocation_addresscity;
 			$SLA["addressRegion"] = $servicelocation_addressstate;
 			$SLA["postalCode"] = $servicelocation_addresszip;		
+			$SLA["telephone"] = $servicelocation_telephone;
 				
 			array_push($SL['address'], $SLA);	
 			
 			array_push($SC['serviceLocation'], $SL);	
-	
 		  	}
 		$r++;	
 		}		
@@ -265,6 +246,8 @@ foreach($servicerows as $servicerow)
 	$Service = format_json(json_encode($F));
 	
 	?>
-	<textarea cols="100" rows="30" style="margin-left: 25px;" /><?php echo $Service; ?></textarea><br /><?php
+<textarea cols="75" rows="30" /><?php echo $Service; ?></textarea><br /></div><?php
 }
 ?>
+</body>
+</html>
